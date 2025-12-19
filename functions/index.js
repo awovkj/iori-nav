@@ -426,8 +426,8 @@ export async function onRequest(context) {
       </div>`;
       
   const horizontalHeaderContent = `
-      <div class="max-w-4xl mx-auto text-center relative z-10 ${themeClass}">
-        <div class="mb-8">
+      <div class="max-w-5xl mx-auto text-center relative z-10 ${themeClass}">
+        <div class="max-w-4xl mx-auto mb-8">
             ${horizontalTitleHtml}
             ${horizontalSubtitleHtml}
         </div>
@@ -440,19 +440,18 @@ export async function onRequest(context) {
         </div>
         
         <div class="relative max-w-5xl mx-auto">
-            <div id="horizontalCategoryNav" class="flex flex-wrap justify-center gap-3 overflow-visible transition-all duration-300" style="min-height: 48px;">
+            <div id="horizontalCategoryNav" class="flex flex-wrap justify-center items-center gap-3 overflow-hidden transition-all duration-300" style="max-height: 60px;">
                 ${horizontalCatalogMarkup}
-            </div>
-            
-            <div id="horizontalMoreBtnContainer" class="hidden absolute right-0 top-0 h-full flex items-center justify-center pl-2 ${isCustomWallpaper ? '' : 'bg-gradient-to-l from-secondary-50 via-secondary-50 to-transparent'} z-20" style="padding-left: 2rem;">
-                 <button id="horizontalMoreBtn" class="nav-btn inactive" style="padding: 0 0.75rem;">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
-                    </svg>
-                 </button>
-            </div>
-            <div id="horizontalMoreDropdown" class="dropdown-menu hidden absolute mt-2 w-auto !left-auto !right-0 !transform-none origin-top-right z-50">
-                <!-- Dropdown items will be moved here by JS -->
+                <div id="horizontalMoreWrapper" class="relative hidden">
+                    <button id="horizontalMoreBtn" class="nav-btn inactive">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                        </svg>
+                    </button>
+                    <div id="horizontalMoreDropdown" class="dropdown-menu hidden absolute mt-2 w-auto right-0 origin-top-right z-50">
+                        <!-- Dropdown items will be moved here by JS -->
+                    </div>
+                </div>
             </div>
         </div>
       </div>

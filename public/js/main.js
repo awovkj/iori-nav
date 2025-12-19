@@ -210,21 +210,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const heading = document.querySelector('[data-role="list-heading"]');
     if (!heading) return;
     
-    // 如果没有传入 count，尝试从 DOM 中实时获取
     const visibleCount = (count !== undefined) ? count : (sitesGrid?.querySelectorAll('.site-card:not(.hidden)').length || 0);
-    const defaultText = heading.dataset.default || '全部收藏';
+    
+    // Explicitly handle navigation state
+    if (activeCatalog !== undefined) {
+        if (activeCatalog) {
+            heading.dataset.active = activeCatalog;
+        } else {
+            // Null or empty string means "All Categories"
+            delete heading.dataset.active;
+        }
+    }
     
     if (keyword) {
       heading.textContent = `搜索结果 · ${visibleCount} 个网站`;
-    } else if (activeCatalog) {
-      heading.textContent = `${activeCatalog} · ${visibleCount} 个网站`;
-      heading.dataset.active = activeCatalog; // 保存当前激活分类名
     } else {
-      const activeText = heading.dataset.active || '';
-      if (activeText) {
-          heading.textContent = `${activeText} · ${visibleCount} 个网站`;
+      const currentActive = heading.dataset.active;
+      if (currentActive) {
+          heading.textContent = `${currentActive} · ${visibleCount} 个网站`;
       } else {
-          heading.textContent = defaultText.includes('·') ? defaultText : `${defaultText} · ${visibleCount} 个网站`;
+          heading.textContent = `全部收藏 · ${visibleCount} 个网站`;
       }
     }
   }
@@ -243,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ========== Horizontal Menu Overflow Logic ==========
   const navContainer = document.getElementById('horizontalCategoryNav');
-  const moreBtnContainer = document.getElementById('horizontalMoreBtnContainer');
+  const moreWrapper = document.getElementById('horizontalMoreWrapper');
   const moreBtn = document.getElementById('horizontalMoreBtn');
   const dropdown = document.getElementById('horizontalMoreDropdown');
   
@@ -251,9 +256,17 @@ document.addEventListener('DOMContentLoaded', function() {
   let checkOverflow = () => {};
   let resetNav = () => {};
 
-  if (navContainer && moreBtnContainer && dropdown) {
+  if (navContainer && moreWrapper && moreBtn && dropdown) {
     resetNav = () => {
+        // Move items back from dropdown to navContainer (before moreWrapper)
         const dropdownItems = Array.from(dropdown.children);
+        // We prepended to dropdown, so the order in dropdown is [N, N+1...].
+        // We should append them back in order.
+        // Actually, checkOverflow prepends from the end. So if we had 1,2,3,4,5.
+        // Wrap -> 5 moved. Dropdown [5].
+        // Wrap -> 4 moved. Dropdown [4, 5].
+        // So dropdown order is correct sequence.
+        // We just need to insert them back before moreWrapper.
         dropdownItems.forEach(item => {
             // Restore wrapper styles if saved
             if (item.dataset.originalClass) {
@@ -266,76 +279,91 @@ document.addEventListener('DOMContentLoaded', function() {
                 link.className = link.dataset.originalClass;
             }
 
-            navContainer.appendChild(item);
+            navContainer.insertBefore(item, moreWrapper);
         });
-        moreBtnContainer.classList.add('hidden');
+        
+        moreWrapper.classList.add('hidden');
         dropdown.classList.add('hidden');
+        moreBtn.classList.remove('active', 'text-primary-600', 'bg-secondary-100');
+        moreBtn.classList.add('inactive');
     };
 
     checkOverflow = () => {
         resetNav();
         
-        const navChildren = Array.from(navContainer.children);
+        // Filter visible category items (exclude moreWrapper which is hidden now)
+        // Actually moreWrapper is child of navContainer.
+        const navChildren = Array.from(navContainer.children).filter(el => el !== moreWrapper);
+        
         if (navChildren.length === 0) return;
         
         const firstTop = navChildren[0].offsetTop;
+        const lastItem = navChildren[navChildren.length - 1];
         
-        // Pass 1: Check for any physical wrapping
-        let firstWrappedIndex = -1;
-        for (let i = 0; i < navChildren.length; i++) {
-            if (navChildren[i].offsetTop > firstTop) {
-                firstWrappedIndex = i;
-                break;
-            }
+        // Check if last item wraps
+        if (lastItem.offsetTop === firstTop) {
+            // No wrapping even for the last item -> All fit!
+            navContainer.style.overflow = 'visible';
+            return;
         }
         
-        if (firstWrappedIndex === -1) {
-            moreBtnContainer.classList.add('hidden');
-            dropdown.classList.add('hidden');
-            return; 
-        }
+        // Wrapping detected! Show the "More" button to participate in layout
+        moreWrapper.classList.remove('hidden');
         
-        // Overflow detected: Show button and move items
-        moreBtnContainer.classList.remove('hidden');
-        
-        const navWidth = navContainer.clientWidth;
-        const buttonWidth = 60; // Reserved space for button
-        const limitRight = navWidth - buttonWidth;
-        
-        const itemsToMove = [];
-        
-        for (let i = 0; i < navChildren.length; i++) {
-            const item = navChildren[i];
-            const itemRight = item.offsetLeft + item.offsetWidth;
+        // Loop to move items to dropdown until everything fits on one line
+        // We check if "moreWrapper" (which is now the last item) wraps.
+        // Or if the item before it wraps.
+        while (true) {
+             // Current visible items (categories)
+             const currentCategories = Array.from(navContainer.children).filter(el => el !== moreWrapper && el.style.display !== 'none');
+             
+             if (currentCategories.length === 0) break; // Should not happen
+             
+             const lastCategory = currentCategories[currentCategories.length - 1];
+             
+             // Check condition: Does "moreWrapper" wrap? Or does "lastCategory" wrap?
+             // (We want everything on the first line)
+             const moreWrapperWraps = moreWrapper.offsetTop > firstTop;
+             const lastCategoryWraps = lastCategory.offsetTop > firstTop;
+             
+             if (!moreWrapperWraps && !lastCategoryWraps) {
+                 // Fits!
+                 break;
+             }
+             
+             // Doesn't fit. Move lastCategory to dropdown.
+             // Prepend to maintain order (4, 5 -> [5] -> [4, 5])
+             
+             // Save wrapper class
+             if (!lastCategory.dataset.originalClass) {
+                 lastCategory.dataset.originalClass = lastCategory.className;
+             }
             
-            // Move item if:
-            // 1. It is already wrapped (i >= firstWrappedIndex)
-            // 2. OR it overlaps with the "More" button area (itemRight > limitRight)
-            if (i >= firstWrappedIndex || itemRight > limitRight) {
-                itemsToMove.push(item);
-            }
+             // Wrapper becomes a block item in dropdown
+             lastCategory.className = 'menu-item-wrapper block w-full relative';
+            
+             // Adjust inner link style
+             const link = lastCategory.querySelector('a');
+             if (link) {
+                 link.dataset.originalClass = link.className;
+                 const isActive = link.classList.contains('active');
+                 link.className = 'dropdown-item w-full text-left px-4 py-2 text-sm';
+                 if (isActive) link.classList.add('active');
+             }
+             
+             dropdown.insertBefore(lastCategory, dropdown.firstChild);
         }
 
-        // Move wrapped items to dropdown
-        itemsToMove.forEach(item => {
-            // Save wrapper class
-            if (!item.dataset.originalClass) {
-                item.dataset.originalClass = item.className;
-            }
-            
-            // Wrapper becomes a block item in dropdown
-            // Ensure relative positioning for submenus
-            item.className = 'menu-item-wrapper block w-full relative'; 
-            
-            // Adjust inner link style
-            const link = item.querySelector('a');
-            if (link) {
-                if (!link.dataset.originalClass) link.dataset.originalClass = link.className;
-                link.className = 'dropdown-item w-full text-left px-4 py-2 text-sm';
-            }
-            
-            dropdown.appendChild(item);
-        });
+        // Check if any item in dropdown is active and highlight More button
+        const activeInDropdown = dropdown.querySelector('.active');
+        if (activeInDropdown) {
+             moreBtn.classList.add('active');
+             moreBtn.classList.remove('inactive');
+             moreBtn.classList.add('text-primary-600', 'bg-secondary-100');
+        }
+
+        // Restore overflow to visible to allow dropdowns (submenus) to show
+        navContainer.style.overflow = 'visible';
     };
 
     // Initial check

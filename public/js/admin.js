@@ -123,6 +123,306 @@ const importBtn = document.getElementById('importBtn');
 const importFile = document.getElementById('importFile');
 const exportBtn = document.getElementById('exportBtn');
 
+// 导入按钮点击事件
+if (importBtn) {
+  importBtn.addEventListener('click', () => {
+    if (importFile) importFile.click();
+  });
+}
+
+// 文件选择事件
+if (importFile) {
+  importFile.addEventListener('change', function (e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const reader = new FileReader();
+
+    if (fileName.endsWith('.html') || fileName.endsWith('.htm')) {
+      // Chrome 书签 HTML 格式导入
+      reader.onload = function (event) {
+        try {
+          const htmlContent = event.target.result;
+          const result = parseChromeBookmarks(htmlContent);
+
+          if (result.sites.length === 0) {
+            showMessage('未在文件中找到有效书签', 'error');
+            return;
+          }
+
+          // 显示预览并确认导入
+          showImportPreview(result);
+        } catch (error) {
+          console.error(error);
+          showMessage('书签解析失败: ' + error.message, 'error');
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    } else if (fileName.endsWith('.json')) {
+      // 系统导出的 JSON 格式导入
+      reader.onload = function (event) {
+        try {
+          const data = JSON.parse(event.target.result);
+
+          // 简单确认后直接导入
+          if (confirm('确定要导入这个 JSON 文件中的书签吗？')) {
+            performImport(data);
+          }
+        } catch (error) {
+          showMessage('JSON 文件解析失败: ' + error.message, 'error');
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    } else {
+      showMessage('不支持的文件格式。请选择 .html 或 .json 文件。', 'error');
+    }
+
+    // Reset file input to allow re-selecting the same file
+    e.target.value = '';
+  });
+}
+
+// 导出按钮事件
+if (exportBtn) {
+  exportBtn.addEventListener('click', () => {
+    fetch('/api/config/export')
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'config.json';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }).catch(err => {
+        showMessage('网络错误', 'error');
+      });
+  });
+}
+
+// 解析 Chrome 书签 HTML - 支持多级分类
+function parseChromeBookmarks(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
+  let categories = [];
+  // Map unique path -> category object to reuse categories within the import file
+  let pathMap = new Map();
+  let sites = [];
+  let tempIdCounter = 1;
+
+  // Helper to create or get category
+  function getOrCreateCategory(name, parentTempId) {
+    // Generate a key based on parentId + name to distinguish 'Dev > Tools' from 'Work > Tools'
+    const key = `${parentTempId || 0}-${name}`;
+    
+    if (pathMap.has(key)) {
+        return pathMap.get(key).id;
+    }
+
+    const newId = tempIdCounter++;
+    const cat = {
+        id: newId,
+        catelog: name,
+        parent_id: parentTempId || 0, // 0 for root
+        sort_order: 9999
+    };
+    categories.push(cat);
+    pathMap.set(key, cat);
+    return newId;
+  }
+
+  function traverse(node, parentId) {
+    // parentId is the temp ID of the folder we are currently processing. 0 for root.
+    
+    for (let i = 0; i < node.childNodes.length; i++) {
+        const child = node.childNodes[i];
+        
+        // Typical structure: <DT><H3>Folder</H3><DL>...</DL></DT>
+        // Or <DT><A>Link</A></DT>
+        if (child.tagName === 'DT') {
+            const h3 = child.querySelector(':scope > h3'); // Direct child check safer
+            const a = child.querySelector(':scope > a');
+            const dl = child.querySelector(':scope > dl');
+
+            if (h3) {
+                const folderName = h3.textContent.trim();
+                let currentFolderId = parentId;
+
+                // Handle Root Folders - Map them to 0 (Root) or create categories?
+                // If parentId is 0, these are top-level.
+                // "书签栏" often contains the actual bookmark tree.
+                if (parentId === 0 && ['书签栏', 'Bookmarks Bar', '收藏夹', '其他书签', 'Other Bookmarks'].includes(folderName)) {
+                     // Treat as root, don't create category, items inside go to root (or parentId 0)
+                     currentFolderId = 0;
+                } else {
+                     currentFolderId = getOrCreateCategory(folderName, parentId);
+                }
+                
+                // If DL is inside DT
+                if (dl) {
+                    traverse(dl, currentFolderId);
+                } else {
+                    // Sometimes DL is a sibling of DT?
+                    // But in that case, the loop over `node` (the parent DL) will hit it next.
+                    // But we need to know it belongs to *this* H3.
+                    // Standard Netscape bookmarks: <DT><H3>...</H3><DL>...</DL> is inside DT?
+                    // Let's check next sibling if dl is missing?
+                    // Actually, DOMParser might handle valid HTML.
+                    // If the format is <DT><H3>...</H3></DT><DL>...</DL> (sibling),
+                    // then `dl` won't be found here.
+                    // We'll handle DL in the main loop if it's a sibling.
+                }
+            } else if (a) {
+                const url = a.getAttribute('href');
+                if (url) {
+                    sites.push({
+                        name: a.textContent.trim() || '未命名',
+                        url: url,
+                        logo: a.getAttribute('icon') || '',
+                        desc: '',
+                        catelog_id: parentId,
+                        sort_order: 9999
+                    });
+                }
+            }
+        } else if (child.tagName === 'DL') {
+            // Found a DL list. If it's a sibling of a DT, we need to know which folder it belongs to.
+            // But traverse() is called with `parentId`.
+            // In a flat list of DTs and DLs, a DL usually follows a DT.
+            // But tracking "current folder" in a loop is tricky if structure varies.
+            // Assumption: The recursive `traverse(dl, currentFolderId)` above handles nested DLs.
+            // If we find a DL here, it might be a sibling DL.
+            // In many exports, <DT><H3>F</H3><DL>...</DL></DT> is the norm.
+            // If we encounter a stray DL, we process it with current context (parentId).
+            traverse(child, parentId);
+        }
+    }
+  }
+
+  // Start with body
+  // Some exports have <DL> at root.
+  const rootDl = doc.querySelector('dl');
+  if (rootDl) {
+      traverse(rootDl, 0);
+  } else {
+      traverse(doc.body, 0);
+  }
+
+  return { category: categories, sites: sites };
+}
+
+// 显示导入预览
+function showImportPreview(result) {
+  const previewModal = document.createElement('div');
+  previewModal.className = 'modal';
+  previewModal.style.display = 'block';
+
+  // Build tree for preview
+  const catMap = new Map();
+  result.category.forEach(c => catMap.set(c.id, { ...c, count: 0, children: [] }));
+  
+  // Count sites per category
+  result.sites.forEach(s => {
+      if (s.catelog_id === 0) {
+           // Root items
+      } else if (catMap.has(s.catelog_id)) {
+          catMap.get(s.catelog_id).count++;
+      }
+  });
+
+  // Build hierarchy text
+  let html = '';
+  function buildPreviewHtml(parentId, depth) {
+      let items = '';
+      const prefix = '&nbsp;&nbsp;'.repeat(depth * 2) + (depth > 0 ? '└─ ' : '');
+      
+      // Find children
+      const children = result.category.filter(c => c.parent_id === parentId);
+      children.forEach(c => {
+          const stats = catMap.get(c.id);
+          items += `<li>${prefix}${escapeHTML(c.catelog)} <span class="text-gray-500 text-xs">(${stats.count} 书签)</span></li>`;
+          items += buildPreviewHtml(c.id, depth + 1);
+      });
+      return items;
+  }
+  
+  const treeHtml = buildPreviewHtml(0, 0);
+  const rootCount = result.sites.filter(s => s.catelog_id === 0).length;
+  const rootHtml = rootCount > 0 ? `<li>(根目录) <span class="text-gray-500 text-xs">(${rootCount} 书签)</span></li>` : '';
+
+  previewModal.innerHTML = `
+    <div class="modal-content">
+      <span class="modal-close" id="closePreviewModal">×</span>
+      <h2>导入预览</h2>
+      <div style="margin: 20px 0;">
+        <p><strong>总共发现 ${result.sites.length} 个书签，${result.category.length} 个分类</strong></p>
+        <div style="margin: 10px 0; padding: 10px; border: 1px solid #eee; max-height: 300px; overflow-y: auto; background: #f9f9f9;">
+           <ul class="text-sm">
+             ${rootHtml}
+             ${treeHtml}
+           </ul>
+        </div>
+        <p style="margin-top: 15px; color: #6c757d; font-size: 0.9rem;">
+          注意: 将按照层级结构导入。若分类已存在（名称和父级匹配），将合并。
+        </p>
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button id="cancelImport" class="button-tertiary" style="background-color: #f3f4f6; color: #4b5563;">取消</button>
+        <button id="confirmImport" class="button-primary" style="background-color: #4f46e5; color: white;">确认导入</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(previewModal);
+
+  document.getElementById('closePreviewModal').addEventListener('click', () => {
+    document.body.removeChild(previewModal);
+  });
+
+  document.getElementById('cancelImport').addEventListener('click', () => {
+    document.body.removeChild(previewModal);
+  });
+
+  document.getElementById('confirmImport').addEventListener('click', () => {
+    document.body.removeChild(previewModal);
+    performImport(result);
+  });
+  
+   previewModal.addEventListener('click', (e) => {
+    if (e.target === previewModal) {
+      document.body.removeChild(previewModal);
+    }
+  });
+}
+
+// 执行导入
+function performImport(dataToImport) {
+  showMessage('正在导入,请稍候...', 'info');
+
+  fetch('/api/config/import', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(dataToImport)
+  }).then(res => res.json())
+    .then(data => {
+      if (data.code === 201 || data.code === 200) {
+        showMessage(data.message, 'success');
+        fetchConfigs();
+        fetchCategories(); // Refresh categories
+      } else {
+        showMessage(data.message || '导入失败', 'error');
+      }
+    }).catch(err => {
+      showMessage('网络错误: ' + err.message, 'error');
+    });
+}
+
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
 
@@ -162,6 +462,19 @@ let totalItems = 0;
 let allConfigs = [];
 let currentSearchKeyword = '';
 let currentCategoryFilter = '';
+
+// Initialize Search
+if (searchInput) {
+  let debounceTimer;
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      currentSearchKeyword = e.target.value.trim();
+      currentPage = 1;
+      fetchConfigs(currentPage, currentSearchKeyword, currentCategoryFilter);
+    }, 300);
+  });
+}
 
 // Initialize Page Size
 if (pageSizeSelect) {
