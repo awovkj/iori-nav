@@ -531,7 +531,13 @@ const initSettings = () => {
                   return;
               }
               
-              const imageUrl = result.data.trim();
+              let imageUrl = '';
+              if (typeof result.data === 'object' && result.data.url) {
+                  imageUrl = result.data.url.trim();
+              } else {
+                  imageUrl = result.data.trim();
+              }
+              
               const title = '自建壁纸';
               renderWallpaperCard(imageUrl, imageUrl, title);
           }

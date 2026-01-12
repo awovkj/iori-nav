@@ -6,8 +6,8 @@ export async function onRequest(context) {
     const action = params.get('action');
 
     if (source === 'self') {
-        const apiUrl = 'https://bed.awovkj.com/bizhi/random?type=img&content=image';
-        return fetchAndProxy(apiUrl, false, true);
+        const apiUrl = 'https://bed.awovkj.com/bizhi/random?type=url&content=image';
+        return fetchAndProxy(apiUrl, true);
     } else if (source === '360') {
         if (action === 'categories') {
             const apiUrl = 'http://cdn.apc.360.cn/index.php?c=WallPaper&a=getAppsByCategory&from=360chrome&cid=36&start=0&count=8';
