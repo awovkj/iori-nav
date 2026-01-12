@@ -32,6 +32,7 @@ const initSettings = () => {
   const onlineWallpapersDiv = document.getElementById('onlineWallpapers');
   const wpSourceBingBtn = document.getElementById('wpSourceBing');
   const wpSource360Btn = document.getElementById('wpSource360');
+  const wpSourceSelfBtn = document.getElementById('wpSourceSelf');
   const category360Select = document.getElementById('category360');
 
   // Card Style Elements
@@ -506,6 +507,32 @@ const initSettings = () => {
   }
 
   // Fetch Bing Wallpapers
+  async function fetchSelfWallpaper() {
+      if (!onlineWallpapersDiv) return;
+      onlineWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 text-sm">加载中...</div>';
+      
+      try {
+          const res = await fetch('/api/wallpaper?source=self');
+          if (!res.ok) throw new Error('API Request Failed');
+          const result = await res.json();
+          
+          onlineWallpapersDiv.innerHTML = '';
+          
+          if (result.code !== 200 || !result.data) {
+              onlineWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 text-sm">未获取到壁纸</div>';
+              return;
+          }
+          
+          const imageUrl = result.data.trim();
+          const title = '自建壁纸';
+          renderWallpaperCard(imageUrl, imageUrl, title);
+          
+      } catch (err) {
+          console.error('Self Wallpaper Fetch Error:', err);
+          onlineWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-red-400 py-8 text-sm">加载失败，请检查网络或稍后重试</div>';
+      }
+  }
+
   async function fetchBingWallpapers(country = '') {
       if (!onlineWallpapersDiv) return;
       onlineWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 text-sm">加载中...</div>';
@@ -620,11 +647,33 @@ const initSettings = () => {
             wpSource360Btn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
             wpSource360Btn.classList.add('text-gray-600', 'hover:text-gray-800', 'hover:bg-white/50');
           }
+          if(wpSourceSelfBtn) {
+            wpSourceSelfBtn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
+            wpSourceSelfBtn.classList.add('text-gray-600', 'hover:text-gray-800', 'hover:bg-white/50');
+          }
           
           if(bingCountrySelect) bingCountrySelect.classList.remove('hidden');
           if(category360Select) category360Select.classList.add('hidden');
           
           fetchBingWallpapers(currentSettings.bing_country);
+      } else if (source === 'self') {
+          if(wpSourceSelfBtn) {
+            wpSourceSelfBtn.classList.add('bg-white', 'text-gray-800', 'shadow-sm');
+            wpSourceSelfBtn.classList.remove('text-gray-600', 'hover:text-gray-800', 'hover:bg-white/50');
+          }
+          if(wpSourceBingBtn) {
+            wpSourceBingBtn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
+            wpSourceBingBtn.classList.add('text-gray-600', 'hover:text-gray-800', 'hover:bg-white/50');
+          }
+          if(wpSource360Btn) {
+            wpSource360Btn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
+            wpSource360Btn.classList.add('text-gray-600', 'hover:text-gray-800', 'hover:bg-white/50');
+          }
+          
+          if(bingCountrySelect) bingCountrySelect.classList.add('hidden');
+          if(category360Select) category360Select.classList.add('hidden');
+          
+          fetchSelfWallpaper();
       } else {
           if(wpSource360Btn) {
             wpSource360Btn.classList.add('bg-white', 'text-gray-800', 'shadow-sm');
@@ -633,6 +682,10 @@ const initSettings = () => {
           if(wpSourceBingBtn) {
             wpSourceBingBtn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
             wpSourceBingBtn.classList.add('text-gray-600', 'hover:text-gray-800', 'hover:bg-white/50');
+          }
+          if(wpSourceSelfBtn) {
+            wpSourceSelfBtn.classList.remove('bg-white', 'text-gray-800', 'shadow-sm');
+            wpSourceSelfBtn.classList.add('text-gray-600', 'hover:text-gray-800', 'hover:bg-white/50');
           }
           
           if(bingCountrySelect) bingCountrySelect.classList.add('hidden');
