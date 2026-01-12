@@ -5,19 +5,11 @@ export async function onRequest(context) {
     const source = params.get('source'); // '360' or 'bing'
 
     if (source === 'self') {
-        const action = params.get('action'); // 'categories' or 'list'
-        
-        if (action === 'categories') {
-            const apiUrl = 'https://bed.awovkj.com/random';
-            return fetchAndProxy(apiUrl);
-        } else if (action === 'list') {
-            const cid = params.get('cid') || '36';
-            const start = params.get('start') || '0';
-            const count = params.get('count') || '8';
-            const apiUrl = `https://bed.awovkj.com/random&cid=${cid}&start=${start}&count=${count}`;
-            return fetchAndProxy(apiUrl);
-        }
-    } else if (source === 'bing') {
+    const apiUrl = 'https://bed.awovkj.com/random?type=img';
+    return fetchAndProxy(apiUrl);
+    }
+
+      else if (source === 'bing') {
         // Bing / Spotlight 壁纸
         const country = params.get('country') || '';
         let bingUrl = '';
