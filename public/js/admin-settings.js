@@ -761,6 +761,9 @@ const initSettings = () => {
   if (wpSource360Btn) {
       wpSource360Btn.addEventListener('click', () => switchWallpaperSource('360'));
   }
+  if (wpSourceSelfBtn) {
+      wpSourceSelfBtn.addEventListener('click', () => switchWallpaperSource('self'));
+  }
 
   // Filters
   if (bingCountrySelect) {

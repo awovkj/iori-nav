@@ -64,22 +64,3 @@ async function fetchAndProxy(url, isJson = true) {
         });
     }
 }
-
-async function fetchAndProxy(url) {
-    try {
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        return new Response(JSON.stringify({ code: 200, data: data }), {
-            headers: {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*' // Or restrictive if needed
-            }
-        });
-    } catch (error) {
-        return new Response(JSON.stringify({ code: 500, message: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
-    }
-}
