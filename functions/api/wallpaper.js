@@ -4,17 +4,17 @@ export async function onRequest(context) {
     const params = url.searchParams;
     const source = params.get('source'); // '360' or 'bing'
 
-    if (source === '360') {
+    if (source === 'self') {
         const action = params.get('action'); // 'categories' or 'list'
         
         if (action === 'categories') {
-            const apiUrl = 'http://cdn.apc.360.cn/index.php?c=WallPaper&a=getAllCategoriesV2&from=360chrome';
+            const apiUrl = 'https://bed.awovkj.com/random';
             return fetchAndProxy(apiUrl);
         } else if (action === 'list') {
             const cid = params.get('cid') || '36';
             const start = params.get('start') || '0';
             const count = params.get('count') || '8';
-            const apiUrl = `http://cdn.apc.360.cn/index.php?c=WallPaper&a=getAppsByCategory&from=360chrome&cid=${cid}&start=${start}&count=${count}`;
+            const apiUrl = `https://bed.awovkj.com/random&cid=${cid}&start=${start}&count=${count}`;
             return fetchAndProxy(apiUrl);
         }
     } else if (source === 'bing') {
