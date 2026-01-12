@@ -6,8 +6,8 @@ export async function onRequest(context) {
     const action = params.get('action');
 
     if (source === 'self') {
-        const apiUrl = 'https://bed.awovkj.com/random?type=img';
-        return fetchAndProxy(apiUrl, false);
+        const apiUrl = 'https://bed.awovkj.com/bizhi/random?type=img&content=image';
+        return fetchAndProxy(apiUrl, false, true);
     } else if (source === '360') {
         if (action === 'categories') {
             const apiUrl = 'http://cdn.apc.360.cn/index.php?c=WallPaper&a=getAppsByCategory&from=360chrome&cid=36&start=0&count=8';
@@ -36,9 +36,19 @@ export async function onRequest(context) {
     });
 }
 
-async function fetchAndProxy(url, isJson = true) {
+async function fetchAndProxy(url, isJson = true, isImage = false) {
     try {
         const response = await fetch(url);
+        
+        if (isImage) {
+            const blob = await response.blob();
+            return new Response(blob, {
+                headers: {
+                    'Content-Type': response.headers.get('Content-Type') || 'image/jpeg',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            });
+        }
         
         if (isJson) {
             const data = await response.json();

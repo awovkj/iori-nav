@@ -514,18 +514,27 @@ const initSettings = () => {
       try {
           const res = await fetch('/api/wallpaper?source=self');
           if (!res.ok) throw new Error('API Request Failed');
-          const result = await res.json();
           
-          onlineWallpapersDiv.innerHTML = '';
-          
-          if (result.code !== 200 || !result.data) {
-              onlineWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 text-sm">未获取到壁纸</div>';
-              return;
+          const contentType = res.headers.get('Content-Type');
+          if (contentType && contentType.startsWith('image/')) {
+              const blob = await res.blob();
+              const imageUrl = URL.createObjectURL(blob);
+              onlineWallpapersDiv.innerHTML = '';
+              const title = '自建壁纸';
+              renderWallpaperCard(imageUrl, imageUrl, title);
+          } else {
+              const result = await res.json();
+              onlineWallpapersDiv.innerHTML = '';
+              
+              if (result.code !== 200 || !result.data) {
+                  onlineWallpapersDiv.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8 text-sm">未获取到壁纸</div>';
+                  return;
+              }
+              
+              const imageUrl = result.data.trim();
+              const title = '自建壁纸';
+              renderWallpaperCard(imageUrl, imageUrl, title);
           }
-          
-          const imageUrl = result.data.trim();
-          const title = '自建壁纸';
-          renderWallpaperCard(imageUrl, imageUrl, title);
           
       } catch (err) {
           console.error('Self Wallpaper Fetch Error:', err);
