@@ -724,6 +724,7 @@ const initSettings = () => {
   settingsBtn.addEventListener('click', () => {
     loadSettings();
     settingsModal.style.display = 'block';
+    document.body.classList.add('modal-open');
   });
 
   const closeModal = () => {
@@ -734,6 +735,7 @@ const initSettings = () => {
       shouldStopBulkGeneration = true;
     }
     settingsModal.style.display = 'none';
+    document.body.classList.remove('modal-open');
   };
   closeBtn.addEventListener('click', closeModal);
   cancelBtn.addEventListener('click', closeModal);
