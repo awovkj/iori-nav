@@ -9,7 +9,9 @@
     "version": "node scripts/update-versions.js",
     "changelog": "node scripts/update-changelog.js",
     "build:css": "npx tailwindcss -i ./public/css/tailwind.css -o ./public/css/tailwind.min.css --minify",
-    "dev:css": "npx tailwindcss -i ./public/css/tailwind.css -o ./public/css/tailwind.min.css --watch"
+    "dev:css": "npx tailwindcss -i ./public/css/tailwind.css -o ./public/css/tailwind.min.css --watch",
+    "build:worker": "npx wrangler@latest pages functions build --outdir=./dist/worker",
+    "deploy:worker": "npm run build:worker && npx wrangler@latest deploy --config ./wrangler.worker.jsonc"
   },
   "devDependencies": {
     "husky": "^9.1.7",

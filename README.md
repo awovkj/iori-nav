@@ -83,7 +83,41 @@
 
 点击上方 **"Fork on GitHub"** 按钮，并点上 ⭐ Star！
 
-### 步骤 2：部署到 Cloudflare Pages
+### 步骤 2：选择部署方式
+
+#### 方式 A：部署到 Cloudflare Workers（自动创建并绑定 KV / D1）
+
+> 适合希望通过 Wrangler 一次性完成部署的场景。首次执行时会根据 `wrangler.worker.jsonc` 自动创建并绑定 `NAV_AUTH` KV 与 `NAV_DB` D1。
+
+```bash
+# 安装依赖
+npm install
+
+# 如你修改过 Tailwind 样式，先重新构建 CSS
+npm run build:css
+
+# 编译 Pages Functions 为单个 Worker，并部署到 Cloudflare Workers
+npm run deploy:worker
+```
+
+首次部署成功后，再执行以下初始化命令：
+
+```bash
+# 初始化远程 D1 表结构
+npx wrangler d1 execute book --remote --file=schema.sql --config ./wrangler.worker.jsonc
+
+# 写入后台管理员账号密码
+npx wrangler kv key put admin_username <你的用户名> --binding NAV_AUTH --remote --config ./wrangler.worker.jsonc
+npx wrangler kv key put admin_password <你的密码> --binding NAV_AUTH --remote --config ./wrangler.worker.jsonc
+```
+
+说明：
+
+- `npm run deploy:worker` 会先运行 `wrangler pages functions build --outdir=./dist/worker`，将 `functions/` 编译为单个 Worker。
+- 静态资源目录为 `public/`，由 `wrangler.worker.jsonc` 中的 `assets.directory` 提供。
+- 首次自动创建资源后，Wrangler 会把生成的资源 ID 回写到 `wrangler.worker.jsonc`，建议将该文件提交到仓库。
+
+#### 方式 B：部署到 Cloudflare Pages（手动创建 KV / D1）
 
 [![Deploy to Cloudflare Pages](https://img.shields.io/badge/Deploy-Cloudflare%20Pages-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://dash.cloudflare.com/?to=/:account/pages/new/provider/github)
 
@@ -137,7 +171,7 @@
 
 ## 🧪 本地开发
 
-> 本地开发依赖 `wrangler.toml`（该文件已 `.gitignore`），请先填入你自己的 D1/KV 资源 ID。
+> `npm run dev` 仍使用本地 `wrangler.toml`（该文件已 `.gitignore`）；新增的 Workers 部署方式使用仓库内的 `wrangler.worker.jsonc`。
 
 ```bash
 # 安装依赖（TailwindCSS / Husky）
@@ -157,14 +191,14 @@ npx wrangler d1 execute book --local --file=schema.sql
 
 ## 🔑 环境变量说明
 
-### 1) 必需绑定（Pages 项目设置 -> 绑定）
+### 1) 必需绑定（Workers / Pages 绑定）
 
 | 绑定名 | 类型 | 说明 |
 | :--- | :--- | :--- |
 | `NAV_DB` | D1 | 主数据库绑定（必需） |
 | `NAV_AUTH` | KV | 会话、限流、缓存标记存储（必需） |
 
-### 2) 可选变量（Pages 项目设置 -> 变量和机密）
+### 2) 可选变量（Workers / Pages 变量和机密）
 
 | 变量名 | 默认值 | 说明 |
 | :--- | :--- | :--- |
