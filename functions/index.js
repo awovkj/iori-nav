@@ -349,7 +349,7 @@ export async function onRequest(context) {
 
   // 背景层 HTML
   const safeWallpaperUrl = sanitizeUrl(S.layout_custom_wallpaper);
-  const defaultBgColor = '#fdf8f3';
+  const defaultBgColor = '#ffffff';
   let bgLayerHtml = '';
   if (safeWallpaperUrl) {
     const blurStyle = S.layout_enable_bg_blur ? `filter: blur(${S.layout_bg_blur_intensity}px); transform: scale(1.02);` : '';
@@ -431,8 +431,8 @@ export async function onRequest(context) {
 
   // 替换 body 标签 + 滚动容器
   html = html.replace(
-    '<body class="bg-secondary-50 font-sans text-gray-800">',
-    `<body class="bg-secondary-50 dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 relative ${isCustomWallpaper ? 'custom-wallpaper' : ''}">${bgLayerHtml}<div id="app-scroll">`
+    '<body class="bg-white font-sans text-gray-800">',
+    `<body class="bg-white dark:bg-gray-900 font-sans text-gray-800 dark:text-gray-100 relative ${isCustomWallpaper ? 'custom-wallpaper' : ''}">${bgLayerHtml}<div id="app-scroll">`
   );
   html = html.replace('</body>', '</div></body>');
 
