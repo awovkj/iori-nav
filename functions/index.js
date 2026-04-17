@@ -15,12 +15,12 @@ function getThemeClasses(isCustomWallpaper) {
     searchInputClass: 'bg-white/90 backdrop-blur border border-gray-200 text-gray-800 placeholder-gray-400 focus:ring-primary-200 focus:border-primary-400 focus:bg-white dark:bg-gray-800/90 dark:border-gray-600 dark:text-gray-200 dark:focus:bg-gray-800',
     searchIconClass: 'text-gray-400 dark:text-gray-500',
   } : {
-    headerClass: 'bg-primary-700 text-white border-b border-primary-600 shadow-sm dark:bg-gray-900 dark:border-gray-800',
+    headerClass: 'bg-white border-b border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800',
     containerClass: 'rounded-2xl border border-primary-100/60 bg-white/80 backdrop-blur-sm shadow-sm dark:bg-gray-800/80 dark:border-gray-700',
-    titleColorClass: 'text-white',
-    subTextColorClass: 'text-primary-100/90 dark:text-gray-400',
-    searchInputClass: 'bg-white/15 text-white placeholder-primary-200 focus:ring-white/30 focus:bg-white/20 border-none dark:bg-gray-800/50 dark:text-gray-200 dark:placeholder-gray-500',
-    searchIconClass: 'text-primary-200 dark:text-gray-500',
+    titleColorClass: 'text-gray-900 dark:text-gray-100',
+    subTextColorClass: 'text-gray-600 dark:text-gray-400',
+    searchInputClass: 'bg-white border border-gray-200 text-gray-800 placeholder-gray-400 focus:ring-primary-200 focus:border-primary-400 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200 dark:placeholder-gray-500',
+    searchIconClass: 'text-gray-400 dark:text-gray-500',
   };
 }
 
