@@ -421,6 +421,69 @@ body:not(.app-ready) #sidebar a[href="?catalog=all"] {
   opacity: 0; /* 初始状态不可见 */
 }
 
+/* ===== 分组显示（竖向菜单 + 全部）样式 ===== */
+.catalog-group {
+  scroll-margin-top: 80px;
+}
+
+.catalog-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: rgb(31 41 55); /* gray-800 */
+  position: relative;
+}
+
+.catalog-group-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 1.1em;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #416d9d, #3c976d);
+  margin-right: 0.125rem;
+}
+
+.catalog-group-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 0 0.5rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background-color: rgb(243 244 246); /* gray-100 */
+  color: rgb(75 85 99); /* gray-600 */
+}
+
+html.dark .catalog-group-title {
+  color: rgb(229 231 235); /* gray-200 */
+}
+html.dark .catalog-group-count {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: rgb(209 213 219); /* gray-300 */
+}
+
+body.custom-wallpaper .catalog-group-title {
+  color: rgb(17 24 39); /* gray-900 */
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+html.dark body.custom-wallpaper .catalog-group-title {
+  color: rgb(243 244 246);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* 分组容器（禁用 grid，改为垂直堆叠） */
+.catalog-group-wrapper > .catalog-group + .catalog-group {
+  padding-top: 0.5rem;
+}
+
 /* 搜索引擎切换选项 - 胶囊按钮样式 */
 .search-engine-option {
   display: inline-flex;

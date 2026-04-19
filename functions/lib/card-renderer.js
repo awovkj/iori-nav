@@ -30,23 +30,25 @@ export function renderSiteCards(sites, settings) {
   // 批量预处理站点数据，减少循环内重复调用
   const processed = sites.map(site => {
     const rawName = site.name || '未命名';
+    const rawDesc = typeof site.desc === 'string' ? site.desc.trim() : '';
     const normalizedUrl = sanitizeUrl(site.url);
     return {
       site,
       safeName: escapeHTML(rawName),
       safeCatalog: escapeHTML(site.catelog_name || '未分类'),
-      safeDesc: escapeHTML(site.desc || '暂无描述'),
+      safeDesc: escapeHTML(rawDesc),
       normalizedUrl,
       safeDisplayUrl: normalizedUrl || '未提供链接',
       logoUrl: sanitizeUrl(site.logo),
       cardInitial: escapeHTML((rawName.trim().charAt(0) || '站').toUpperCase()),
       hasValidUrl: Boolean(normalizedUrl),
+      hasDesc: Boolean(rawDesc),
     };
   });
 
-  return processed.map(({ site, safeName, safeCatalog, safeDesc, normalizedUrl, safeDisplayUrl, logoUrl, cardInitial, hasValidUrl }) => {
+  return processed.map(({ site, safeName, safeCatalog, safeDesc, normalizedUrl, safeDisplayUrl, logoUrl, cardInitial, hasValidUrl, hasDesc }) => {
 
-    const descHtml = hideDesc ? '' : `<p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2" title="${safeDesc}">${safeDesc}</p>`;
+    const descHtml = hideDesc || !hasDesc ? '' : `<p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2" title="${safeDesc}">${safeDesc}</p>`;
 
     const linksHtml = hideLinks ? '' : `
       <div class="mt-3 flex items-center justify-between">
@@ -87,6 +89,34 @@ export function renderSiteCards(sites, settings) {
         </div>
       </div>`;
   }).join('');
+}
+
+/**
+ * 按分类分组渲染站点卡片（每组一个标题 + 内部网格）
+ * @param {Array} rootCategories - 顶层分类（已建好子树）
+ * @param {Map<number, Array>} sitesByCatId - 按 catelog_id 分组的站点
+ * @param {string} innerGridClass - 每组内部 grid 容器的 class
+ * @param {object} settings - 解析后的设置对象
+ * @returns {string}
+ */
+export function renderGroupedSiteCards(rootCategories, sitesByCatId, innerGridClass, settings) {
+  const groups = [];
+  const traverse = (cat) => {
+    const siteList = sitesByCatId.get(cat.id) || [];
+    if (siteList.length > 0) {
+      groups.push(`
+        <section class="catalog-group" data-catalog-id="${cat.id}" data-catalog-name="${escapeHTML(cat.catelog || '未分类')}">
+          <h3 class="catalog-group-title">
+            <span class="catalog-group-name">${escapeHTML(cat.catelog || '未分类')}</span>
+            <span class="catalog-group-count">${siteList.length}</span>
+          </h3>
+          <div class="${innerGridClass}">${renderSiteCards(siteList, settings)}</div>
+        </section>`);
+    }
+    (cat.children || []).forEach(traverse);
+  };
+  rootCategories.forEach(traverse);
+  return groups.join('');
 }
 
 /**

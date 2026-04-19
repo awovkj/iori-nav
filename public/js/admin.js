@@ -568,7 +568,8 @@ function renderConfig(configs) {
     const normalizedUrl = window.normalizeUrl(config.url);
     const displayUrl = config.url ? window.escapeHTML(config.url) : '未提供';
     const normalizedLogo = window.normalizeUrl(config.logo);
-    const descCell = config.desc ? window.escapeHTML(config.desc) : '暂无描述';
+    const rawDesc = typeof config.desc === 'string' ? config.desc.trim() : '';
+    const safeDesc = rawDesc ? window.escapeHTML(rawDesc) : '';
     const safeCatalog = window.escapeHTML(config.catelog_name || '未分类');
     const cardInitial = (safeName.charAt(0) || '站').toUpperCase();
     
@@ -622,7 +623,7 @@ function renderConfig(configs) {
                   </span>
                </div>
             </div>
-            <p class="mt-3 text-sm text-gray-500 leading-relaxed line-clamp-2 h-10" title="${descCell}">${descCell}</p>
+            ${safeDesc ? `<p class="mt-3 text-sm text-gray-500 leading-relaxed line-clamp-2 h-10" title="${safeDesc}">${safeDesc}</p>` : ''}
         </div>
         
         <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">

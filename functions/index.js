@@ -4,7 +4,7 @@ import { FONT_MAP, HOME_CACHE_TTL } from './constants';
 import { escapeHTML, sanitizeUrl, normalizeSortOrder, getStyleStr } from './lib/utils';
 import { getSettingsKeys, parseSettings } from './lib/settings-parser';
 import { renderHorizontalMenu, renderVerticalMenu } from './lib/menu-renderer';
-import { renderSiteCards, renderEmptyState } from './lib/card-renderer';
+import { renderSiteCards, renderGroupedSiteCards, renderEmptyState } from './lib/card-renderer';
 
 function getThemeClasses(isCustomWallpaper) {
   return isCustomWallpaper ? {
@@ -194,12 +194,7 @@ export async function onRequest(context) {
   const horizontalCatalogMarkup = horizontalAllLink + renderHorizontalMenu(rootCategories, currentCatalogName);
   const catalogLinkMarkup = renderVerticalMenu(rootCategories, currentCatalogName, isCustomWallpaper);
 
-  // === 10. 生成站点卡片 HTML ===
-  let sitesGridMarkup = sites.length > 0
-    ? renderSiteCards(sites, S)
-    : renderEmptyState(categories.length, S.home_hide_admin);
-
-  // === 11. 计算 Grid 列数 ===
+  // === 10. 计算 Grid 列数 ===
   let gridClass = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 justify-items-center';
   if (S.layout_grid_cols === '5') {
     gridClass = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6 justify-items-center';
@@ -208,6 +203,30 @@ export async function onRequest(context) {
   } else if (S.layout_grid_cols === '7') {
     gridClass = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3 sm:gap-6 justify-items-center';
   }
+
+  // === 11. 生成站点卡片 HTML ===
+  // 分组模式：菜单为竖向 + 当前显示"全部"（未选择分类）
+  const groupedMode = S.layout_menu_layout === 'vertical' && !catalogExists && allSites.length > 0;
+
+  const sitesByCatId = new Map();
+  if (groupedMode) {
+    allSites.forEach(site => {
+      const list = sitesByCatId.get(site.catelog_id);
+      if (list) list.push(site); else sitesByCatId.set(site.catelog_id, [site]);
+    });
+  }
+
+  let sitesGridMarkup;
+  if (groupedMode) {
+    sitesGridMarkup = renderGroupedSiteCards(rootCategories, sitesByCatId, gridClass, S);
+  } else {
+    sitesGridMarkup = sites.length > 0
+      ? renderSiteCards(sites, S)
+      : renderEmptyState(categories.length, S.home_hide_admin);
+  }
+
+  // 外层容器 class：分组模式下非 grid，改为纵向堆叠；否则使用 gridClass
+  const outerGridClass = groupedMode ? 'catalog-group-wrapper space-y-8' : gridClass;
 
   // === 12. 计算文本和统计信息 ===
   const datalistOptions = categories.map(cat => `<option value="${escapeHTML(cat.catelog)}">`).join('');
@@ -422,9 +441,21 @@ export async function onRequest(context) {
     window.IORI_LAYOUT_CONFIG = {
       hideDesc: ${S.layout_hide_desc}, hideLinks: ${S.layout_hide_links}, hideCategory: ${S.layout_hide_category},
       gridCols: "${S.layout_grid_cols}", cardStyle: "${S.layout_card_style}",
-      enableFrostedGlass: ${S.layout_enable_frosted_glass}, rememberLastCategory: ${S.home_remember_last_category}
+      enableFrostedGlass: ${S.layout_enable_frosted_glass}, rememberLastCategory: ${S.home_remember_last_category},
+      menuLayout: "${S.layout_menu_layout}", gridClass: ${JSON.stringify(gridClass)}
     };
   </script>`;
+
+  // 分类顺序（用于前端按分类分组渲染；与菜单顺序一致，仅保留必要字段）
+  const flatCatsForClient = [];
+  const flattenCats = (cats) => {
+    cats.forEach(c => {
+      flatCatsForClient.push({ id: c.id, catelog: c.catelog });
+      if (c.children && c.children.length > 0) flattenCats(c.children);
+    });
+  };
+  flattenCats(rootCategories);
+  headInjections += `<script>window.IORI_CATEGORIES = ${JSON.stringify(flatCatsForClient).replace(/</g, '\\u003c')};</script>`;
 
   // --- 一次性替换 </head> ---
   html = html.replace('</head>', headInjections + '</head>');
@@ -472,7 +503,7 @@ export async function onRequest(context) {
     'SIDEBAR_TOGGLE_CLASS': sidebarToggleClass,
   };
   html = html.replace(/\{\{(\w+)\}\}/g, (_, key) => replacements[key] ?? '');
-  html = html.replace('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6', gridClass);
+  html = html.replace('grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6', outerGridClass);
 
   // === 17. 返回响应 ===
   const response = new Response(html, {

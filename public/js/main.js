@@ -325,6 +325,17 @@ document.addEventListener('DOMContentLoaded', function () {
           }
         });
 
+        // 分组模式下，空组整体隐藏（保持视觉整洁）
+        const groups = sitesGrid?.querySelectorAll('.catalog-group');
+        groups?.forEach(group => {
+          const visibleCards = group.querySelectorAll('.site-card:not(.hidden)');
+          if (visibleCards.length === 0) {
+            group.classList.add('hidden');
+          } else {
+            group.classList.remove('hidden');
+          }
+        });
+
         updateHeading(keyword);
       }, 200);
     });
@@ -586,11 +597,15 @@ document.addEventListener('DOMContentLoaded', function () {
         // catalogId 是字符串，site.catelog_id 是数字，需转换
         filteredSites = allSites.filter(site => String(site.catelog_id) === String(catalogId));
       } else {
-        // catalogId 为空表示“全部”
+        // catalogId 为空表示"全部"
         filteredSites = allSites;
       }
 
-      renderSites(filteredSites);
+      if (shouldUseGrouped(catalogId)) {
+        renderGroupedSites(filteredSites);
+      } else {
+        renderSites(filteredSites);
+      }
       updateHeading(null, catalogId ? catalogName : null, filteredSites.length);
       updateNavigationState(catalogId);
 
@@ -622,51 +637,30 @@ document.addEventListener('DOMContentLoaded', function () {
     document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
   }
 
-  function renderSites(sites) {
-    const sitesGrid = document.getElementById('sitesGrid');
-    if (!sitesGrid) return;
-
-    // 重新渲染时清除搜索缓存
-    searchCardCache = null;
-
-    // 使用全局配置获取布局设置，避免依赖 DOM 推断
-    const config = window.IORI_LAYOUT_CONFIG || {};
+  function createSiteCard(site, index, config) {
     const isFiveCols = config.gridCols === '5';
     const isSixCols = config.gridCols === '6';
     const hideDesc = config.hideDesc === true;
     const hideLinks = config.hideLinks === true;
     const hideCategory = config.hideCategory === true;
     const cardStyle = config.cardStyle || 'style1';
+    const isFrostedEnabled = config.isFrostedEnabled;
 
-    // 优先从配置获取毛玻璃开关状态，CSS 变量作为回退
-    const computedStyle = getComputedStyle(document.documentElement);
-    const frostedBlurVal = computedStyle.getPropertyValue('--frosted-glass-blur').trim();
-    const isFrostedEnabled = config.enableFrostedGlass !== undefined
-      ? config.enableFrostedGlass
-      : (frostedBlurVal !== '');
+    const safeName = escapeHTML(site.name || '未命名');
+    const safeUrl = normalizeUrl(site.url);
+    const rawDesc = typeof site.desc === 'string' ? site.desc.trim() : '';
+    const safeDesc = escapeHTML(rawDesc);
+    const safeCatalog = escapeHTML(site.catelog_name || site.catelog || '未分类');
+    const cardInitial = (safeName.charAt(0) || '站').toUpperCase();
 
-    sitesGrid.innerHTML = '';
+    const logoHtml = site.logo
+      ? `<img src="${escapeHTML(site.logo)}" alt="${safeName}" class="w-10 h-10 rounded-lg object-cover bg-gray-100 dark:bg-gray-700" decoding="async" loading="lazy">`
+      : `<div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white font-semibold text-lg shadow-inner">${cardInitial}</div>`;
 
-    if (sites.length === 0) {
-      sitesGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-10">本分类下暂无书签</div>';
-      return;
-    }
+    const descHtml = hideDesc || !rawDesc ? '' : `<p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2" title="${safeDesc}">${safeDesc}</p>`;
 
-    sites.forEach((site, index) => {
-      const safeName = escapeHTML(site.name || '未命名');
-      const safeUrl = normalizeUrl(site.url);
-      const safeDesc = escapeHTML(site.desc || '暂无描述');
-      const safeCatalog = escapeHTML(site.catelog_name || site.catelog || '未分类');
-      const cardInitial = (safeName.charAt(0) || '站').toUpperCase();
-
-      const logoHtml = site.logo
-        ? `<img src="${escapeHTML(site.logo)}" alt="${safeName}" class="w-10 h-10 rounded-lg object-cover bg-gray-100 dark:bg-gray-700" decoding="async" loading="lazy">`
-        : `<div class="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center text-white font-semibold text-lg shadow-inner">${cardInitial}</div>`;
-
-      const descHtml = hideDesc ? '' : `<p class="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2" title="${safeDesc}">${safeDesc}</p>`;
-
-      const hasValidUrl = !!safeUrl;
-      const linksHtml = hideLinks ? '' : `
+    const hasValidUrl = !!safeUrl;
+    const linksHtml = hideLinks ? '' : `
           <div class="mt-3 flex items-center justify-between">
             <span class="text-xs text-primary-600 dark:text-primary-400 truncate flex-1 min-w-0 mr-2" title="${safeUrl}">${safeUrl || '未提供链接'}</span>
             <button class="copy-btn relative flex items-center px-2 py-1 ${hasValidUrl ? 'bg-accent-100 text-accent-700 hover:bg-accent-200 dark:bg-accent-900/30 dark:text-accent-300 dark:hover:bg-accent-900/50' : 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'} rounded-full text-xs font-medium transition-colors" data-url="${safeUrl}" ${hasValidUrl ? '' : 'disabled'}>
@@ -678,37 +672,36 @@ document.addEventListener('DOMContentLoaded', function () {
             </button>
           </div>`;
 
-      const categoryHtml = hideCategory ? '' : `
+    const categoryHtml = hideCategory ? '' : `
                 <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium bg-secondary-100 text-primary-700 dark:bg-secondary-800 dark:text-primary-300">
                   ${safeCatalog}
                 </span>`;
 
-      const frostedClass = isFrostedEnabled ? 'frosted-glass-effect' : '';
-      const cardStyleClass = cardStyle === 'style2' ? 'style-2' : '';
-      const baseCardClass = isFrostedEnabled
-        ? 'site-card group overflow-hidden transition-all'
-        : 'site-card group bg-white border border-primary-100/60 shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700';
+    const frostedClass = isFrostedEnabled ? 'frosted-glass-effect' : '';
+    const cardStyleClass = cardStyle === 'style2' ? 'style-2' : '';
+    const baseCardClass = isFrostedEnabled
+      ? 'site-card group overflow-hidden transition-all'
+      : 'site-card group bg-white border border-primary-100/60 shadow-sm overflow-hidden dark:bg-gray-800 dark:border-gray-700';
 
-      const card = document.createElement('div');
-      card.className = `${baseCardClass} ${frostedClass} ${cardStyleClass} card-anim-enter`;
-      const delay = Math.min(index, 20) * 30;
-      if (delay > 0) {
-        card.style.animationDelay = `${delay}ms`;
-      }
+    const card = document.createElement('div');
+    card.className = `${baseCardClass} ${frostedClass} ${cardStyleClass} card-anim-enter`;
+    const delay = Math.min(index, 20) * 30;
+    if (delay > 0) {
+      card.style.animationDelay = `${delay}ms`;
+    }
 
-      // Remove animation class after completion to ensure clean state
-      card.addEventListener('animationend', () => {
-        card.classList.remove('card-anim-enter');
-        card.style.animation = 'none'; // 彻底禁用动画，防止干扰 Hover
-        if (delay > 0) card.style.removeProperty('animation-delay');
-      }, { once: true });
+    card.addEventListener('animationend', () => {
+      card.classList.remove('card-anim-enter');
+      card.style.animation = 'none';
+      if (delay > 0) card.style.removeProperty('animation-delay');
+    }, { once: true });
 
-      card.setAttribute('data-name', safeName);
-      card.setAttribute('data-url', safeUrl);
-      card.setAttribute('data-catalog', safeCatalog);
-      card.setAttribute('data-desc', safeDesc);
+    card.setAttribute('data-name', safeName);
+    card.setAttribute('data-url', safeUrl);
+    card.setAttribute('data-catalog', safeCatalog);
+    card.setAttribute('data-desc', safeDesc);
 
-      card.innerHTML = `
+    card.innerHTML = `
         <div class="site-card-content">
           <a href="${safeUrl}" ${hasValidUrl ? 'target="_blank" rel="noopener noreferrer"' : ''} class="block">
             <div class="flex items-start">
@@ -726,8 +719,117 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
         `;
 
-      sitesGrid.appendChild(card);
+    return card;
+  }
+
+  function getRenderConfig() {
+    const config = window.IORI_LAYOUT_CONFIG || {};
+    const computedStyle = getComputedStyle(document.documentElement);
+    const frostedBlurVal = computedStyle.getPropertyValue('--frosted-glass-blur').trim();
+    const isFrostedEnabled = config.enableFrostedGlass !== undefined
+      ? config.enableFrostedGlass
+      : (frostedBlurVal !== '');
+    return { ...config, isFrostedEnabled };
+  }
+
+  function applyGridClass(grouped) {
+    const sitesGrid = document.getElementById('sitesGrid');
+    if (!sitesGrid) return;
+    const config = window.IORI_LAYOUT_CONFIG || {};
+    const gridClass = config.gridClass || 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 justify-items-center';
+    sitesGrid.className = grouped ? 'catalog-group-wrapper space-y-8' : gridClass;
+  }
+
+  function renderSites(sites) {
+    const sitesGrid = document.getElementById('sitesGrid');
+    if (!sitesGrid) return;
+
+    // 重新渲染时清除搜索缓存
+    searchCardCache = null;
+    applyGridClass(false);
+    sitesGrid.innerHTML = '';
+
+    if (sites.length === 0) {
+      sitesGrid.innerHTML = '<div class="col-span-full text-center text-gray-500 py-10">本分类下暂无书签</div>';
+      return;
+    }
+
+    const config = getRenderConfig();
+    sites.forEach((site, index) => {
+      sitesGrid.appendChild(createSiteCard(site, index, config));
     });
+  }
+
+  function renderGroupedSites(sites) {
+    const sitesGrid = document.getElementById('sitesGrid');
+    if (!sitesGrid) return;
+
+    searchCardCache = null;
+    applyGridClass(true);
+    sitesGrid.innerHTML = '';
+
+    if (sites.length === 0) {
+      sitesGrid.innerHTML = '<div class="text-center text-gray-500 py-10">暂无书签</div>';
+      return;
+    }
+
+    const cats = window.IORI_CATEGORIES || [];
+    const config = getRenderConfig();
+    const innerGridClass = config.gridClass || 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 justify-items-center';
+
+    const sitesByCat = new Map();
+    sites.forEach(site => {
+      const cid = site.catelog_id;
+      const list = sitesByCat.get(cid);
+      if (list) list.push(site); else sitesByCat.set(cid, [site]);
+    });
+
+    let cardIndex = 0;
+    const rendered = new Set();
+    cats.forEach(cat => {
+      const list = sitesByCat.get(cat.id);
+      if (!list || list.length === 0) return;
+      rendered.add(cat.id);
+      const section = document.createElement('section');
+      section.className = 'catalog-group';
+      section.dataset.catalogId = cat.id;
+      section.dataset.catalogName = cat.catelog || '未分类';
+      section.innerHTML = `
+        <h3 class="catalog-group-title">
+          <span class="catalog-group-name">${escapeHTML(cat.catelog || '未分类')}</span>
+          <span class="catalog-group-count">${list.length}</span>
+        </h3>
+        <div class="${innerGridClass}"></div>`;
+      const innerGrid = section.querySelector('div');
+      list.forEach(site => {
+        innerGrid.appendChild(createSiteCard(site, cardIndex++, config));
+      });
+      sitesGrid.appendChild(section);
+    });
+
+    // 未在分类树中的残留书签（例如分类被删除但 site 残留），兜底为"未分类"
+    const orphanSites = sites.filter(s => !rendered.has(s.catelog_id));
+    if (orphanSites.length > 0) {
+      const section = document.createElement('section');
+      section.className = 'catalog-group';
+      section.dataset.catalogName = '未分类';
+      section.innerHTML = `
+        <h3 class="catalog-group-title">
+          <span class="catalog-group-name">未分类</span>
+          <span class="catalog-group-count">${orphanSites.length}</span>
+        </h3>
+        <div class="${innerGridClass}"></div>`;
+      const innerGrid = section.querySelector('div');
+      orphanSites.forEach(site => {
+        innerGrid.appendChild(createSiteCard(site, cardIndex++, config));
+      });
+      sitesGrid.appendChild(section);
+    }
+  }
+
+  function shouldUseGrouped(catalogId) {
+    const config = window.IORI_LAYOUT_CONFIG || {};
+    return config.menuLayout === 'vertical' && !catalogId;
   }
 
   function updateNavigationState(catalogId) {
@@ -857,7 +959,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (lastId === 'all') {
           // Explicitly restore "All Categories" state
           const allSites = window.IORI_SITES || [];
-          renderSites(allSites);
+          if (shouldUseGrouped(null)) {
+            renderGroupedSites(allSites);
+          } else {
+            renderSites(allSites);
+          }
           updateHeading(null, null, allSites.length);
           updateNavigationState(null);
           return;
