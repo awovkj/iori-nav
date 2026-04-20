@@ -429,13 +429,13 @@ body:not(.app-ready) #sidebar a[href="?catalog=all"] {
 .catalog-group-title {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
-  padding: 0.125rem 0 0.25rem;
-  font-size: 1rem;
-  line-height: 1.5;
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+  padding: 0.125rem 0 0.5rem;
+  font-size: 1.1875rem;
+  line-height: 1.4;
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.015em;
   color: rgb(31 41 55); /* gray-800 */
   position: relative;
 }
@@ -447,8 +447,8 @@ body:not(.app-ready) #sidebar a[href="?catalog=all"] {
 .catalog-group-title::before {
   content: "";
   display: inline-block;
-  width: 3px;
-  height: 1rem;
+  width: 4px;
+  height: 1.25rem;
   border-radius: 9999px;
   background: linear-gradient(180deg, #416d9d, #3c976d);
   flex-shrink: 0;
@@ -474,12 +474,12 @@ html.dark body.custom-wallpaper .catalog-group-title {
 
 @media (min-width: 768px) {
   .catalog-group-title {
-    margin-bottom: 1.375rem;
-    font-size: 1.0625rem;
+    margin-bottom: 2rem;
+    font-size: 1.3125rem;
   }
 
   .catalog-group-wrapper > .catalog-group + .catalog-group {
-    padding-top: 1.125rem;
+    padding-top: 1.25rem;
   }
 }
 
