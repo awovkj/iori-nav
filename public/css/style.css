@@ -429,45 +429,33 @@ body:not(.app-ready) #sidebar a[href="?catalog=all"] {
 .catalog-group-title {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
-  margin-bottom: 1rem;
-  padding: 0.25rem 0 0.5rem;
-  font-size: 1.125rem;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding: 0.125rem 0 0.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
   font-weight: 600;
+  letter-spacing: 0.01em;
   color: rgb(31 41 55); /* gray-800 */
   position: relative;
+}
+
+.catalog-group-name {
+  display: inline-block;
 }
 
 .catalog-group-title::before {
   content: "";
   display: inline-block;
   width: 3px;
-  height: 1.1em;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #416d9d, #3c976d);
-  margin-right: 0.125rem;
-}
-
-.catalog-group-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.5rem;
-  padding: 0 0.5rem;
-  height: 1.25rem;
+  height: 1rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: rgb(243 244 246); /* gray-100 */
-  color: rgb(75 85 99); /* gray-600 */
+  background: linear-gradient(180deg, #416d9d, #3c976d);
+  flex-shrink: 0;
 }
 
 html.dark .catalog-group-title {
   color: rgb(229 231 235); /* gray-200 */
-}
-html.dark .catalog-group-count {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: rgb(209 213 219); /* gray-300 */
 }
 
 body.custom-wallpaper .catalog-group-title {
@@ -481,7 +469,18 @@ html.dark body.custom-wallpaper .catalog-group-title {
 
 /* 分组容器（禁用 grid，改为垂直堆叠） */
 .catalog-group-wrapper > .catalog-group + .catalog-group {
-  padding-top: 0.5rem;
+  padding-top: 0.875rem;
+}
+
+@media (min-width: 768px) {
+  .catalog-group-title {
+    margin-bottom: 1.375rem;
+    font-size: 1.0625rem;
+  }
+
+  .catalog-group-wrapper > .catalog-group + .catalog-group {
+    padding-top: 1.125rem;
+  }
 }
 
 /* 搜索引擎切换选项 - 胶囊按钮样式 */

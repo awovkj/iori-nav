@@ -108,7 +108,6 @@ export function renderGroupedSiteCards(rootCategories, sitesByCatId, innerGridCl
         <section class="catalog-group" data-catalog-id="${cat.id}" data-catalog-name="${escapeHTML(cat.catelog || '未分类')}">
           <h3 class="catalog-group-title">
             <span class="catalog-group-name">${escapeHTML(cat.catelog || '未分类')}</span>
-            <span class="catalog-group-count">${siteList.length}</span>
           </h3>
           <div class="${innerGridClass}">${renderSiteCards(siteList, settings)}</div>
         </section>`);

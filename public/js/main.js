@@ -797,7 +797,6 @@ document.addEventListener('DOMContentLoaded', function () {
       section.innerHTML = `
         <h3 class="catalog-group-title">
           <span class="catalog-group-name">${escapeHTML(cat.catelog || '未分类')}</span>
-          <span class="catalog-group-count">${list.length}</span>
         </h3>
         <div class="${innerGridClass}"></div>`;
       const innerGrid = section.querySelector('div');
@@ -816,7 +815,6 @@ document.addEventListener('DOMContentLoaded', function () {
       section.innerHTML = `
         <h3 class="catalog-group-title">
           <span class="catalog-group-name">未分类</span>
-          <span class="catalog-group-count">${orphanSites.length}</span>
         </h3>
         <div class="${innerGridClass}"></div>`;
       const innerGrid = section.querySelector('div');
